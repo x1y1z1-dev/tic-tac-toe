@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tic-Tac-Toe</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    background: linear-gradient(135deg, #1e3c72, #2a5298);
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: #fff;
+  }
+
+  h1 { font-size: 2.2rem; letter-spacing: 2px; text-shadow: 0 2px 8px rgba(0,0,0,.4); }
+
+  #game-wrapper {
+    background: rgba(255,255,255,0.08);
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: 0 12px 40px rgba(0,0,0,.45);
+    backdrop-filter: blur(5px);
+    max-width: calc(100vw - 24px);
+  }
+
+  /* Turn pulse: green for Player X, red for Player O (team colors) */
+  #game-wrapper.turn-x {
+    animation: turn-pulse-x 2.2s ease-in-out infinite;
+  }
+
+  #game-wrapper.turn-o {
+    animation: turn-pulse-o 2.2s ease-in-out infinite;
+  }
+
+  @keyframes turn-pulse-x {
+    0%, 100% {
+      box-shadow: 0 12px 40px rgba(0,0,0,.45), 0 0 0 0 rgba(34,197,94,0);
+    }
+    50% {
+      box-shadow: 0 12px 40px rgba(0,0,0,.45), 0 0 26px 6px rgba(34,197,94,.45);
+    }
+  }
+
+  @keyframes turn-pulse-o {
+    0%, 100% {
+      box-shadow: 0 12px 40px rgba(0,0,0,.45), 0 0 0 0 rgba(230,57,70,0);
+    }
+    50% {
+      box-shadow: 0 12px 40px rgba(0,0,0,.45), 0 0 26px 6px rgba(230,57,70,.45);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #game-wrapper.turn-x {
+      animation: none;
+      box-shadow: 0 12px 40px rgba(0,0,0,.45), 0 0 20px 4px rgba(34,197,94,.32);
+    }
+    #game-wrapper.turn-o {
+      animation: none;
+      box-shadow: 0 12px 40px rgba(0,0,0,.45), 0 0 20px 4px rgba(230,57,70,.32);
+    }
+  }
+
+  canvas {
+    display: block;
+    background: #f8fafc;
+    border-radius: 12px;
+    cursor: crosshair;
+    width: 100%;
+    height: auto;
+    max-width: 460px;
+  }
+
+  #status {
+    font-size: 1.25rem;
+    font-weight: 600;
+    min-height: 1.6em;
+    text-align: center;
+  }
+
+  #status.winner { color: #ffd166; }
+
+  .controls { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; justify-content: center; }
+
+  button {
+    font-size: 1rem;
+    padding: 10px 22px;
+    border: none;
+    border-radius: 10px;
+    background: #ffd166;
+    color: #1e3c72;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform .15s, box-shadow .15s, background .15s, border-color .15s, color .15s;
+  }
+  button:hover { transform: scale(1.05); box-shadow: 0 6px 16px rgba(0,0,0,.35); }
+  button:active { transform: scale(0.97); }
+  button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+
+  /* Mode controls: each option has its own color, and the active one is highlighted. */
+  .mode-group {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 9px 10px;
+    max-width: 100%;
+    border-radius: 16px;
+    background: rgba(15, 23, 42, .22);
+    border: 1px solid rgba(255, 255, 255, .1);
+  }
+  .mode-label {
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, .58);
+    padding: 0 2px;
+  }
+
+  .mode-btn {
+    --btn-text: #e2e8f0;
+    --btn-bg: rgba(255, 255, 255, .08);
+    --btn-border: rgba(255, 255, 255, .24);
+    --btn-bg-hover: rgba(255, 255, 255, .16);
+    --btn-border-hover: #e2e8f0;
+    --btn-active-bg: linear-gradient(135deg, #334155, #475569);
+    --btn-active-border: #cbd5e1;
+    --btn-active-text: #fff;
+    --btn-ring: rgba(255, 255, 255, .18);
+    --btn-glow: rgba(255, 255, 255, .28);
+    position: relative;
+    border: 1px solid var(--btn-border);
+    background: var(--btn-bg);
+    color: var(--btn-text);
+    box-shadow: none;
+  }
+  .mode-btn:hover {
+    background: var(--btn-bg-hover);
+    border-color: var(--btn-border-hover);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, .28);
+  }
+  .mode-btn:active { transform: scale(.97); }
+  .mode-btn.is-active {
+    background: var(--btn-active-bg);
+    border-color: var(--btn-active-border);
+    color: var(--btn-active-text);
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 3px var(--btn-ring), 0 8px 20px rgba(0, 0, 0, .32), 0 0 22px var(--btn-glow);
+  }
+  .mode-btn.is-active:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 0 3px var(--btn-ring), 0 10px 24px rgba(0, 0, 0, .36), 0 0 28px var(--btn-glow);
+  }
+  .mode-btn.is-active::after {
+    content: "✓";
+    position: absolute;
+    top: -7px;
+    right: -7px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    color: #0f172a;
+    font-size: .68rem;
+    line-height: 18px;
+    text-align: center;
+    box-shadow: 0 2px 7px rgba(0, 0, 0, .4);
+  }
+
+  #easyBtn {
+    --btn-text: #a7f3d0;
+    --btn-bg: rgba(16, 185, 129, .12);
+    --btn-border: rgba(52, 211, 153, .42);
+    --btn-bg-hover: rgba(16, 185, 129, .22);
+    --btn-border-hover: #6ee7b7;
+    --btn-active-bg: linear-gradient(135deg, #065f46, #047857);
+    --btn-active-border: #6ee7b7;
+    --btn-ring: rgba(52, 211, 153, .22);
+    --btn-glow: rgba(16, 185, 129, .48);
+  }
+  #mediumBtn {
+    --btn-text: #fde68a;
+    --btn-bg: rgba(245, 158, 11, .12);
+    --btn-border: rgba(251, 191, 36, .42);
+    --btn-bg-hover: rgba(245, 158, 11, .22);
+    --btn-border-hover: #fcd34d;
+    --btn-active-bg: linear-gradient(135deg, #f59e0b, #fbbf24);
+    --btn-active-border: #fde68a;
+    --btn-active-text: #352000;
+    --btn-ring: rgba(251, 191, 36, .24);
+    --btn-glow: rgba(245, 158, 11, .48);
+  }
+  #hardBtn {
+    --btn-text: #fecaca;
+    --btn-bg: rgba(239, 68, 68, .12);
+    --btn-border: rgba(248, 113, 113, .42);
+    --btn-bg-hover: rgba(239, 68, 68, .22);
+    --btn-border-hover: #fca5a5;
+    --btn-active-bg: linear-gradient(135deg, #991b1b, #dc2626);
+    --btn-active-border: #fca5a5;
+    --btn-ring: rgba(248, 113, 113, .23);
+    --btn-glow: rgba(239, 68, 68, .5);
+  }
+  #twoBtn {
+    --btn-text: #e9d5ff;
+    --btn-bg: rgba(168, 85, 247, .12);
+    --btn-border: rgba(192, 132, 252, .42);
+    --btn-bg-hover: rgba(168, 85, 247, .22);
+    --btn-border-hover: #d8b4fe;
+    --btn-active-bg: linear-gradient(135deg, #581c87, #7e22ce);
+    --btn-active-border: #d8b4fe;
+    --btn-ring: rgba(192, 132, 252, .24);
+    --btn-glow: rgba(168, 85, 247, .5);
+  }
+
+  #scores {
+    display: flex;
+    gap: 24px;
+    font-size: 1.05rem;
+    background: rgba(0,0,0,.25);
+    padding: 10px 20px;
+    border-radius: 12px;
+  }
+  #scores b { color: #4cc9f0; }
+  #scores span { color: #f8f9fa; }
+
+  .modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  .modal.active { display: flex; }
+  .modal-content {
+    background: #fff;
+    color: #1e3c72;
+    padding: 30px 40px;
+    border-radius: 18px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5);
+    max-width: 340px;
+  }
+  .modal-content h2 { font-size: 1.9rem; margin-bottom: 10px; }
+  .modal-content p { font-size: 1.15rem; margin-bottom: 22px; color: #334155; }
+</style>
+</head>
+<body>
+  <h1>❌⭕ Tic-Tac-Toe</h1>
+
+  <div id="game-wrapper">
+    <canvas id="board" width="420" height="420"></canvas>
+  </div>
+
+  <div id="status">Turn: Player X</div>
+
+  <div class="controls">
+    <button id="restartBtn">🔄 Play again</button>
+    <div class="mode-group" role="group" aria-label="Game mode">
+      <span class="mode-label" aria-hidden="true">Mode</span>
+      <button id="easyBtn" class="mode-btn" aria-pressed="false" title="Play against the Easy bot">😐 Easy bot</button>
+      <button id="mediumBtn" class="mode-btn" aria-pressed="false" title="Play against the Medium bot">🙂 Medium bot</button>
+      <button id="hardBtn" class="mode-btn is-active" aria-pressed="true" title="Play against the Hard bot">😎 Hard bot</button>
+      <button id="twoBtn" class="mode-btn" aria-pressed="false" title="Play with two players on this device">👥 2 Players</button>
+    </div>
+  </div>
+
+  <div id="scores">
+    <span><span id="labelX">Player X</span>: <b id="scoreX">0</b></span>
+    <span><span id="labelO">Bot</span>: <b id="scoreO">0</b></span>
+    <span><span>Draws</span>: <b id="scoreDraw">0</b></span>
+  </div>
+
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <h2 id="modalTitle"></h2>
+      <p id="modalText"></p>
+      <button id="modalRestartBtn">🔄 Play again</button>
+    </div>
+  </div>
+
+<script>
+// ============ DOM ELEMENTS ============
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+const statusEl = document.getElementById('status');
+const restartBtn = document.getElementById('restartBtn');
+const scoreXEl = document.getElementById('scoreX');
+const scoreOEl = document.getElementById('scoreO');
+const scoreDrawEl = document.getElementById('scoreDraw');
+const labelX = document.getElementById('labelX');
+const labelO = document.getElementById('labelO');
+const modal = document.getElementById('modal');
+const modalTitle = document.getElementById('modalTitle');
+const modalText = document.getElementById('modalText');
+const modalRestartBtn = document.getElementById('modalRestartBtn');
+const gameWrapper = document.getElementById('game-wrapper');
+const modeButtons = {
+  easy: document.getElementById('easyBtn'),
+  medium: document.getElementById('mediumBtn'),
+  hard: document.getElementById('hardBtn'),
+  '2p': document.getElementById('twoBtn')
+};
+
+const CELL = 140;          // cell size
+const GRID = CELL * 3;     // 420
+const PAD = 20;             // canvas padding
+const EDGE_TOLERANCE = 1e-9; // absorbs floating-point error on exact board edges
+
+// Local save: score, settings, and the current unfinished round
+const STORAGE_KEY = 'tic-tac-toe-save-v1';
+const SAVE_VERSION = 1;
+
+// ============ GAME LOGIC ============
+const WIN_COMBOS = [
+  [0,1,2],[3,4,5],[6,7,8], // rows
+  [0,3,6],[1,4,7],[2,5,8], // columns
+  [0,4,8],[2,4,6]           // diagonals
+];
+
+let board = Array(9).fill(null); // null | 'X' | 'O'
+let currentPlayer = 'X';
+let winner = null;                // 'X' | 'O' | 'draw'
+let winLine = null;               // winning combo indices
+let scores = { X: 0, O: 0, draw: 0 };
+let difficulty = 'hard'; // 'easy' | 'medium' | 'hard'
+let mode = 'bot';         // 'bot' | '2p' — game mode
+let aiTimer = null;       // bot move timer (prevents double moves)
+
+// Minimax with alpha-beta pruning.
+// Score: O win is positive (faster wins score higher),
+// X win is negative (later losses cost less), draw is 0.
+function minimax(boardArr, isMaximizing, alpha, beta) {
+  const result = checkWinner(boardArr);
+  const filled = boardArr.filter(Boolean).length;
+  if (result === 'O') return 10 - filled;
+  if (result === 'X') return -10 + filled;
+  if (result === 'draw') return 0;
+
+  const available = [];
+  for (let i = 0; i < 9; i++) if (!boardArr[i]) available.push(i);
+
+  if (isMaximizing) {
+    let best = -Infinity;
+    for (const i of available) {
+      boardArr[i] = 'O';
+      const val = minimax(boardArr, false, alpha, beta);
+      boardArr[i] = null;
+      best = Math.max(best, val);
+      alpha = Math.max(alpha, best);
+      if (beta <= alpha) break;
+    }
+    return best;
+  } else {
+    let best = Infinity;
+    for (const i of available) {
+      boardArr[i] = 'X';
+      const val = minimax(boardArr, true, alpha, beta);
+      boardArr[i] = null;
+      best = Math.min(best, val);
+      beta = Math.min(beta, best);
+      if (beta <= alpha) break;
+    }
+    return best;
+  }
+}
+
+function aiMove() {
+  // The bot may move only when it is actually its turn and the game is not over
+  if (winner || mode !== 'bot' || currentPlayer !== 'O') return;
+
+  const available = [];
+  for (let i = 0; i < board.length; i++) if (!board[i]) available.push(i);
+  if (available.length === 0) return;
+
+  let move;
+  if (difficulty === 'easy') {
+    // Easy bot: random free cell
+    move = available[Math.floor(Math.random() * available.length)];
+  } else if (difficulty === 'medium') {
+    // Medium bot: heuristic (win → block → center → corner → side)
+    move = heuristicMove(available);
+  } else {
+    // Strong bot: full minimax — never loses
+    move = bestMinimaxMove(available);
+  }
+
+  board[move] = 'O';
+  const result = checkWinner(board);
+  if (result) {
+    endGame(result);
+    updateStatus();
+    draw();
+    saveState();
+    return;
+  }
+  currentPlayer = 'X'; // hand the turn back to the player
+  updateStatus();
+  draw();
+  saveState();
+}
+
+// Best move for the strong bot: full search + random choice among equal moves
+function bestMinimaxMove(available) {
+  // Strongest opening — center
+  if (available.length === 9) return 4;
+
+  let bestScore = -Infinity;
+  let bestMoves = [];
+  for (const i of available) {
+    board[i] = 'O';
+    const score = minimax(board, false, -Infinity, Infinity);
+    board[i] = null;
+    if (score > bestScore) {
+      bestScore = score;
+      bestMoves = [i];
+    } else if (score === bestScore) {
+      bestMoves.push(i);
+    }
+  }
+  // pick randomly among equally good moves — keeps the bot unpredictable
+  return bestMoves[Math.floor(Math.random() * bestMoves.length)];
+}
+
+// Medium bot: classic strategy "win → block → center → corner → side"
+function heuristicMove(available) {
+  let m = findWinningMove('O'); // 1. win if possible
+  if (m !== -1) return m;
+
+  m = findWinningMove('X'); // 2. block the opponent's win
+  if (m !== -1) return m;
+
+  if (!board[4]) return 4; // 3. center
+
+  // 4. corner opposite to the opponent's corner
+  const corners = [0, 2, 6, 8];
+  const opposite = { 0: 8, 8: 0, 2: 6, 6: 2 };
+  for (const c of corners) {
+    if (board[c] === 'X' && !board[opposite[c]]) return opposite[c];
+  }
+
+  // 5. any free corner
+  const freeCorners = corners.filter(c => !board[c]);
+  if (freeCorners.length) {
+    return freeCorners[Math.floor(Math.random() * freeCorners.length)];
+  }
+
+  // 6. any free cell (side)
+  return available[Math.floor(Math.random() * available.length)];
+}
+
+// Find a cell that completes a line with two marks
+function findWinningMove(mark) {
+  for (const combo of WIN_COMBOS) {
+    const values = combo.map(i => board[i]);
+    if (values.filter(v => v === mark).length === 2 && values.includes(null)) {
+      return combo[values.indexOf(null)];
+    }
+  }
+  return -1;
+}
+
+function checkWinner(arr) {
+  for (const combo of WIN_COMBOS) {
+    const [a, b, c] = combo;
+    if (arr[a] && arr[a] === arr[b] && arr[a] === arr[c]) {
+      return arr[a];
+    }
+  }
+  if (arr.every(v => v)) return 'draw';
+  return null;
+}
+
+function handleCellClick(x, y) {
+  if (winner) return;
+  if (mode === 'bot' && currentPlayer !== 'X') return; // in bot mode the human plays X
+
+  const cellX = Math.floor((x - PAD) / CELL + EDGE_TOLERANCE);
+  const cellY = Math.floor((y - PAD) / CELL + EDGE_TOLERANCE);
+  const index = cellY * 3 + cellX;
+
+  if (board[index] || (cellX < 0 || cellX > 2 || cellY < 0 || cellY > 2)) return;
+
+  board[index] = currentPlayer;
+  const result = checkWinner(board);
+
+  if (result) {
+    endGame(result);
+    updateStatus();
+    draw();
+    saveState();
+    return;
+  }
+
+  if (mode === 'bot') {
+    // human (X) has moved, now it's the bot's turn (O)
+    currentPlayer = 'O';
+    scheduleAiMove(300);
+  } else {
+    // 2-player mode — pass the turn to the other player
+    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+  }
+  updateStatus();
+  draw();
+  saveState();
+}
+
+// End the game and record the result
+function endGame(result) {
+  winner = result;
+  winLine = result === 'draw' ? null : findWinningLine(board);
+  if (result === 'draw') scores.draw++;
+  else scores[result]++;
+  updateScoreboard();
+  openModal(result);
+}
+
+// Update the scoreboard, labels, and the highlighted mode button
+function updateScoreboard() {
+  labelX.textContent = 'Player X';
+  labelO.textContent = mode === '2p' ? 'Player O' : 'Bot';
+  scoreXEl.textContent = scores.X;
+  scoreOEl.textContent = scores.O;
+  scoreDrawEl.textContent = scores.draw;
+  updateModeButtons();
+}
+
+// Mark the active opponent: one bot difficulty in bot mode, or 2 Players in 2P mode.
+function updateModeButtons() {
+  for (const [key, btn] of Object.entries(modeButtons)) {
+    const active = mode === '2p' ? key === '2p' : key === difficulty;
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-pressed', String(active));
+  }
+}
+
+// Game result modal
+function openModal(result) {
+  modalTitle.textContent = result === 'draw' ? '🤝 Draw!' : `🏆 ${playerName(result)} wins!`;
+  modalText.textContent = result === 'draw'
+    ? "It's a draw! Ready for the next game?"
+    : `${playerName(result)} wins! Ready for the next game?`;
+  modal.classList.add('active');
+}
+
+function closeModal() {
+  modal.classList.remove('active');
+}
+
+function findWinningLine(arr) {
+  for (const combo of WIN_COMBOS) {
+    const [a, b, c] = combo;
+    if (arr[a] && arr[a] === arr[b] && arr[a] === arr[c]) return combo;
+  }
+  return null;
+}
+
+function playerName(p) {
+  if (mode === '2p') return `Player ${p}`;
+  return p === 'O' ? 'Bot' : 'Player X';
+}
+
+function updateStatus() {
+  if (winner === 'draw') {
+    statusEl.textContent = '🤝 Draw!';
+  } else if (winner) {
+    statusEl.textContent = `🏆 ${playerName(winner)} wins!`;
+    statusEl.classList.add('winner');
+  } else {
+    statusEl.textContent = `Turn: ${playerName(currentPlayer)}`;
+    statusEl.classList.remove('winner');
+  }
+  updateTurnHint();
+}
+
+// Pulse the board in the color of the player whose turn it is.
+// In bot mode only the human turn pulses; 2P mode pulses for both players.
+function updateTurnHint() {
+  const activeTurn = !winner && !modal.classList.contains('active') &&
+    !(mode === 'bot' && currentPlayer === 'O');
+  gameWrapper.classList.toggle('turn-x', activeTurn && currentPlayer === 'X');
+  gameWrapper.classList.toggle('turn-o', activeTurn && currentPlayer === 'O');
+}
+
+// ============ CANVAS RENDERING ============
+function draw() {
+  const size = PAD * 2 + GRID;
+  canvas.width = size;
+  canvas.height = size;
+
+  // background
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillRect(0, 0, size, size);
+
+  // vertical lines
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 2;
+  for (let i = 1; i < 3; i++) {
+    ctx.beginPath();
+    ctx.moveTo(PAD + i * CELL, PAD);
+    ctx.lineTo(PAD + i * CELL, PAD + GRID);
+    ctx.stroke();
+  }
+  // horizontal lines
+  for (let i = 1; i < 3; i++) {
+    ctx.beginPath();
+    ctx.moveTo(PAD, PAD + i * CELL);
+    ctx.lineTo(PAD + GRID, PAD + i * CELL);
+    ctx.stroke();
+  }
+
+  // marks
+  for (let i = 0; i < board.length; i++) {
+    const x = PAD + (i % 3) * CELL + CELL / 2;
+    const y = PAD + Math.floor(i / 3) * CELL + CELL / 2;
+
+    if (board[i] === 'X') drawX(x, y);
+    if (board[i] === 'O') drawCircle(x, y);
+  }
+
+  // winning line highlight
+  if (winLine) {
+    ctx.strokeStyle = 'rgba(255, 209, 102, 0.65)';
+    ctx.lineWidth = 10;
+    ctx.lineCap = 'round';
+    const [a, b, c] = winLine;
+    const points = [
+      [PAD + (a % 3) * CELL + CELL / 2, PAD + Math.floor(a / 3) * CELL + CELL / 2],
+      [PAD + (b % 3) * CELL + CELL / 2, PAD + Math.floor(b / 3) * CELL + CELL / 2],
+      [PAD + (c % 3) * CELL + CELL / 2, PAD + Math.floor(c / 3) * CELL + CELL / 2],
+    ];
+    ctx.beginPath();
+    ctx.moveTo(points[0][0], points[0][1]);
+    ctx.lineTo(points[1][0], points[1][1]);
+    ctx.lineTo(points[2][0], points[2][1]);
+    ctx.stroke();
+  }
+}
+
+function drawX(x, y) {
+  ctx.strokeStyle = '#15803d'; // Player X — green team color
+  ctx.lineWidth = 8;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x - 40, y - 40);
+  ctx.lineTo(x + 40, y + 40);
+  ctx.moveTo(x + 40, y - 40);
+  ctx.lineTo(x - 40, y + 40);
+  ctx.stroke();
+}
+
+function drawCircle(x, y) {
+  ctx.strokeStyle = '#e63946';
+  ctx.lineWidth = 8;
+  ctx.beginPath();
+  ctx.arc(x, y, 42, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+// ============ LOCAL SAVE ============
+// Store the score, settings, and the current round. A finished round is restored
+// as a fresh board, while its score and settings remain.
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      version: SAVE_VERSION,
+      mode,
+      difficulty,
+      scores: { ...scores },
+      board: board.slice(),
+      currentPlayer
+    }));
+  } catch (e) {
+    // Storage may be unavailable (private mode, blocked local files) — play without it.
+  }
+}
+
+// Read the saved state and reject anything malformed or from an older version.
+function loadSavedState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+
+    const data = JSON.parse(raw);
+    if (!data || data.version !== SAVE_VERSION) return null;
+    if (data.mode !== 'bot' && data.mode !== '2p') return null;
+    if (!['easy', 'medium', 'hard'].includes(data.difficulty)) return null;
+
+    const savedScores = data.scores;
+    if (!savedScores ||
+        !['X', 'O', 'draw'].every(k => Number.isInteger(savedScores[k]) && savedScores[k] >= 0)) {
+      return null;
+    }
+
+    if (!Array.isArray(data.board) || data.board.length !== 9) return null;
+    if (!data.board.every(v => v === null || v === 'X' || v === 'O')) return null;
+    if (data.currentPlayer !== 'X' && data.currentPlayer !== 'O') return null;
+
+    return {
+      mode: data.mode,
+      difficulty: data.difficulty,
+      scores: { X: savedScores.X, O: savedScores.O, draw: savedScores.draw },
+      board: data.board.slice(),
+      currentPlayer: data.currentPlayer
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+// Restore the last session, or start the first game.
+function initGame() {
+  const saved = loadSavedState();
+
+  if (!saved) {
+    updateScoreboard();
+    newRound(); // the first move is random in bot mode too
+    return;
+  }
+
+  mode = saved.mode;
+  difficulty = saved.difficulty;
+  scores = saved.scores;
+  board = saved.board;
+  currentPlayer = saved.currentPlayer;
+
+  const result = checkWinner(board);
+  updateScoreboard();
+
+  if (result) {
+    // The saved round is already over — keep its score and start a new round.
+    newRound();
+    return;
+  }
+
+  winner = null;
+  winLine = null;
+  updateStatus();
+  draw();
+
+  // Resume the bot's pending turn if the page was closed during it.
+  if (mode === 'bot' && currentPlayer === 'O') scheduleAiMove(300);
+}
+
+// ============ GAME FLOW ============
+function resetGame() {
+  board = Array(9).fill(null);
+  // in bot mode the first move is random: either the human (X) or the bot (O)
+  currentPlayer = (mode === 'bot' && Math.random() < 0.5) ? 'O' : 'X';
+  winner = null;
+  winLine = null;
+  updateStatus();
+  draw();
+}
+
+function scheduleAiMove(delay = 300) {
+  clearTimeout(aiTimer);
+  aiTimer = setTimeout(aiMove, delay);
+}
+
+// New round: clear the board, keep the score
+function newRound() {
+  clearTimeout(aiTimer);
+  modal.classList.remove('active');
+  resetGame();
+  if (mode === 'bot' && currentPlayer === 'O') {
+    scheduleAiMove(300); // if the bot starts, it moves first
+  }
+  saveState();
+}
+
+// Full reset: new round + zero the score (on mode/difficulty change)
+function resetAll() {
+  newRound();
+  scores = { X: 0, O: 0, draw: 0 };
+  updateScoreboard();
+  saveState();
+}
+
+function restart() {
+  newRound();
+}
+
+restartBtn.addEventListener('click', restart);
+
+document.getElementById('easyBtn').addEventListener('click', () => setDifficulty('easy'));
+document.getElementById('mediumBtn').addEventListener('click', () => setDifficulty('medium'));
+document.getElementById('hardBtn').addEventListener('click', () => setDifficulty('hard'));
+document.getElementById('twoBtn').addEventListener('click', () => setMode('2p'));
+
+modalRestartBtn.addEventListener('click', () => {
+  newRound();
+});
+
+modal.addEventListener('click', (e) => {
+  if (e.target === modal) closeModal();
+});
+
+function setDifficulty(d) {
+  if (d === difficulty && mode === 'bot') return; // already selected — keep the score
+  difficulty = d;
+  mode = 'bot';
+  resetAll();
+}
+
+function setMode(m) {
+  if (m === mode) return; // already selected — keep the score
+  mode = m;
+  resetAll();
+}
+
+// Convert click coordinates taking canvas scaling into account
+canvas.addEventListener('click', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const x = (e.clientX - rect.left) * scaleX;
+  const y = (e.clientY - rect.top) * scaleY;
+  handleCellClick(x, y);
+});
+
+// ============ GAME START ============
+initGame();
+</script>
+</body>
+</html>
